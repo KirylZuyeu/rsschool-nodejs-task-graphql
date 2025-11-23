@@ -1,18 +1,32 @@
-import { MemberType, Post, PrismaClient, Profile } from '@prisma/client';
+import {
+  MemberType,
+  Post,
+  PrismaClient,
+  Profile,
+  User,
+  SubscribersOnAuthors, // Добавлен для полной типизации
+} from '@prisma/client';
 import { FastifyRequest } from 'fastify';
-import { MemberTypeId } from '../member-types/schemas.js';
 import DataLoader from 'dataloader';
-import { UserType } from './graphql-model.js';
+import { MemberTypeId } from '../member-types/schemas.js';
+
 
 export interface GraphQLContext {
   prisma: PrismaClient;
   request: FastifyRequest;
   loaders: {
-    userSubscribedTo: DataLoader<unknown, typeof UserType>;
-    subscribedToUser: DataLoader<unknown, typeof UserType>;
-    memberType: DataLoader<unknown, MemberType>;
-    posts: DataLoader<unknown, Post>;
-    profile: DataLoader<unknown, Profile>;
+
+    subscribedToUser: DataLoader<string, User[]>;
+
+    userSubscribedTo: DataLoader<string, User[]>;
+
+    memberType: DataLoader<number | string, MemberType>;
+
+    posts: DataLoader<string, Post>;
+
+    profile: DataLoader<string, Profile>;
+
+    profileByUserId: DataLoader<string, Profile>;
   };
 }
 
@@ -26,7 +40,6 @@ export interface CreateUserDto {
   name: string;
   balance: number;
 }
-
 export interface CreateProfileDto {
   isMale: boolean;
   yearOfBirth: number;

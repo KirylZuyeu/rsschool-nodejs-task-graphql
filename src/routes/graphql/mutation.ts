@@ -19,16 +19,41 @@ import {
 import { Post, Profile, User } from '@prisma/client';
 import { UUIDType } from './types/uuid.js';
 
+type CreateArgs<T> = {
+  dto: T;
+};
+
+type ChangeArgs<T extends { id: string }, D> = {
+  id: T['id'];
+  dto: D;
+};
+
+type DeleteArgs<T extends { id: string }> = {
+  id: T['id'];
+};
+
+type SubscriptionArgs = {
+  userId: User['id'];
+  authorId: User['id'];
+};
+
+// --- Объект GraphQL Mutation ---
+
 export const MutationType = new GraphQLObjectType<unknown, GraphQLContext>({
   name: 'Mutation',
   fields: {
+    // --- User Mutations ---
     createUser: {
       type: new GraphQLNonNull(UserType),
       args: {
         dto: { type: new GraphQLNonNull(CreateUserInput) },
       },
-      resolve: async (_source, args: Record<string, object>, ctx) => {
-        return await ctx.prisma.user.create({ data: args.dto as CreateUserDto });
+      resolve: async (
+        _source,
+        { dto }: CreateArgs<CreateUserDto>,
+        ctx,
+      ) => {
+        return await ctx.prisma.user.create({ data: dto });
       },
     },
     changeUser: {
@@ -39,7 +64,7 @@ export const MutationType = new GraphQLObjectType<unknown, GraphQLContext>({
       },
       resolve: async (
         _source,
-        { id, dto }: { id: User['id']; dto: Omit<User, 'id'> },
+        { id, dto }: ChangeArgs<User, Omit<User, 'id'>>,
         ctx,
       ) => {
         return await ctx.prisma.user.update({ where: { id }, data: dto });
@@ -50,18 +75,24 @@ export const MutationType = new GraphQLObjectType<unknown, GraphQLContext>({
       args: {
         id: { type: new GraphQLNonNull(UUIDType) },
       },
-      resolve: async (_source, { id }: { id: User['id'] }, ctx) => {
+      resolve: async (_source, { id }: DeleteArgs<User>, ctx) => {
         await ctx.prisma.user.delete({ where: { id } });
-        return `User with id ${id} successfully deleted`;
+        return `User with id ${id} successfully deleted.`;
       },
     },
+
+    // --- Profile Mutations ---
     createProfile: {
       type: new GraphQLNonNull(ProfileType),
       args: {
         dto: { type: new GraphQLNonNull(CreateProfileInput) },
       },
-      resolve: async (_source, args: Record<string, object>, ctx) => {
-        return await ctx.prisma.profile.create({ data: args.dto as CreateProfileDto });
+      resolve: async (
+        _source,
+        { dto }: CreateArgs<CreateProfileDto>,
+        ctx,
+      ) => {
+        return await ctx.prisma.profile.create({ data: dto });
       },
     },
     changeProfile: {
@@ -72,7 +103,7 @@ export const MutationType = new GraphQLObjectType<unknown, GraphQLContext>({
       },
       resolve: async (
         _source,
-        { id, dto }: { id: Profile['id']; dto: Omit<Profile, 'id' | 'userId'> },
+        { id, dto }: ChangeArgs<Profile, Omit<Profile, 'id' | 'userId'>>,
         ctx,
       ) => {
         return await ctx.prisma.profile.update({ where: { id }, data: dto });
@@ -83,18 +114,24 @@ export const MutationType = new GraphQLObjectType<unknown, GraphQLContext>({
       args: {
         id: { type: new GraphQLNonNull(UUIDType) },
       },
-      resolve: async (_source, { id }: { id: Profile['id'] }, ctx) => {
+      resolve: async (_source, { id }: DeleteArgs<Profile>, ctx) => {
         await ctx.prisma.profile.delete({ where: { id } });
-        return `Porfile with id ${id} successfully deleted`;
+        return `Profile with id ${id} successfully deleted.`;
       },
     },
+
+    // --- Post Mutations ---
     createPost: {
       type: new GraphQLNonNull(PostType),
       args: {
         dto: { type: new GraphQLNonNull(CreatePostInput) },
       },
-      resolve: async (_source, args: Record<string, object>, ctx) => {
-        return await ctx.prisma.post.create({ data: args.dto as CreatePostDto });
+      resolve: async (
+        _source,
+        { dto }: CreateArgs<CreatePostDto>,
+        ctx,
+      ) => {
+        return await ctx.prisma.post.create({ data: dto });
       },
     },
     changePost: {
@@ -105,7 +142,7 @@ export const MutationType = new GraphQLObjectType<unknown, GraphQLContext>({
       },
       resolve: async (
         _source,
-        { id, dto }: { id: Post['id']; dto: Omit<Post, 'id'> },
+        { id, dto }: ChangeArgs<Post, Omit<Post, 'id'>>,
         ctx,
       ) => {
         return await ctx.prisma.post.update({
@@ -122,11 +159,13 @@ export const MutationType = new GraphQLObjectType<unknown, GraphQLContext>({
       args: {
         id: { type: new GraphQLNonNull(UUIDType) },
       },
-      resolve: async (_source, { id }: { id: Post['id'] }, ctx) => {
+      resolve: async (_source, { id }: DeleteArgs<Post>, ctx) => {
         await ctx.prisma.post.delete({ where: { id } });
-        return `Post with id ${id} successfully deleted`;
+        return `Post with id ${id} successfully deleted.`;
       },
     },
+
+    // --- Subscription Mutations ---
     subscribeTo: {
       type: new GraphQLNonNull(GraphQLString),
       args: {
@@ -135,13 +174,13 @@ export const MutationType = new GraphQLObjectType<unknown, GraphQLContext>({
       },
       resolve: async (
         _source,
-        { userId, authorId }: { userId: User['id']; authorId: User['id'] },
+        { userId, authorId }: SubscriptionArgs,
         ctx,
       ) => {
         await ctx.prisma.subscribersOnAuthors.create({
           data: { subscriberId: userId, authorId },
         });
-        return `User with id ${userId} subscibed to author with id ${authorId}`;
+        return `User with id ${userId} subscribed to author with id ${authorId}.`;
       },
     },
     unsubscribeFrom: {
@@ -152,7 +191,7 @@ export const MutationType = new GraphQLObjectType<unknown, GraphQLContext>({
       },
       resolve: async (
         _source,
-        { userId, authorId }: { userId: User['id']; authorId: User['id'] },
+        { userId, authorId }: SubscriptionArgs,
         ctx,
       ) => {
         await ctx.prisma.subscribersOnAuthors.delete({
@@ -163,7 +202,7 @@ export const MutationType = new GraphQLObjectType<unknown, GraphQLContext>({
             },
           },
         });
-        return `User with id ${userId} unsubscibed from author with id ${authorId}`;
+        return `User with id ${userId} unsubscribed from author with id ${authorId}.`;
       },
     },
   },
